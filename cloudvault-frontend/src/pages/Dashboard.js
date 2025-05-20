@@ -6,15 +6,14 @@ import "./Dashboard.css";
 const Dashboard = () => {
   const [files, setFiles] = useState([]);
   const [uploadProgress, setUploadProgress] = useState(0);
+  const [sortOption, setSortOption] = useState("date-desc");
   const navigate = useNavigate();
 
-  // 🔐 Redirect to login if not logged in
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) navigate("/");
   }, [navigate]);
 
-  // ⬇️ Load all files from backend
   useEffect(() => {
     const fetchFiles = async () => {
       try {
@@ -27,7 +26,6 @@ const Dashboard = () => {
     fetchFiles();
   }, []);
 
-  // ⬆️ Upload handler
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -68,12 +66,13 @@ const Dashboard = () => {
     e.target.value = null;
   };
 
-  // 📥 Download
-  const handleDownload = (url) => {
-    window.open(url, "_blank");
+  const handleDownload = (savedName) => {
+    window.open(
+      `http://localhost:5000/api/files/download/${savedName}`,
+      "_blank"
+    );
   };
 
-  // ❌ Delete
   const handleDelete = async (savedName, index) => {
     try {
       await axios.delete(`http://localhost:5000/api/files/delete/${savedName}`);
@@ -83,10 +82,27 @@ const Dashboard = () => {
     }
   };
 
-  // 🚪 Logout
   const handleLogout = () => {
     localStorage.removeItem("token");
     navigate("/");
+  };
+
+  const sortFiles = (files) => {
+    switch (sortOption) {
+      case "name-asc":
+        return [...files].sort((a, b) => a.name.localeCompare(b.name));
+      case "name-desc":
+        return [...files].sort((a, b) => b.name.localeCompare(a.name));
+      case "size-asc":
+        return [...files].sort((a, b) => parseInt(a.size) - parseInt(b.size));
+      case "size-desc":
+        return [...files].sort((a, b) => parseInt(b.size) - parseInt(a.size));
+      case "date-asc":
+        return [...files].sort((a, b) => new Date(a.date) - new Date(b.date));
+      case "date-desc":
+      default:
+        return [...files].sort((a, b) => new Date(b.date) - new Date(a.date));
+    }
   };
 
   return (
@@ -111,17 +127,35 @@ const Dashboard = () => {
         {uploadProgress > 0 && <p>Uploading: {uploadProgress}%</p>}
       </div>
 
+      <div className="sort-controls">
+        <label>Sort by:</label>
+        <select
+          value={sortOption}
+          onChange={(e) => setSortOption(e.target.value)}
+        >
+          <option value="date-desc">Date (newest first)</option>
+          <option value="date-asc">Date (oldest first)</option>
+          <option value="name-asc">Name (A–Z)</option>
+          <option value="name-desc">Name (Z–A)</option>
+          <option value="size-asc">Size (smallest first)</option>
+          <option value="size-desc">Size (largest first)</option>
+        </select>
+      </div>
+
       <div className="file-list">
         {files.length === 0 ? (
           <p>No files uploaded yet.</p>
         ) : (
-          files.map((file, idx) => (
+          sortFiles(files).map((file, idx) => (
             <div key={idx} className="file-item">
               <h3>{file.name}</h3>
               <p>Type: {file.type}</p>
               <p>Size: {file.size}</p>
               <p>Date: {file.date}</p>
-              <button onClick={() => handleDownload(file.url)}>Download</button>
+              <button onClick={() => handleDownload(file.savedName)}>
+                Download
+              </button>
+
               <button onClick={() => handleDelete(file.savedName, idx)}>
                 Delete
               </button>

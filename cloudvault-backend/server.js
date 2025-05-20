@@ -18,6 +18,7 @@ app.use(express.json());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/auth", require("./routes/auth"));
 app.use("/api/files", require("./routes/upload"));
+app.use("/api/files/download", require("./routes/download"));
 
 connectDB();
 
